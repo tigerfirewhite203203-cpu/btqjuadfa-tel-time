@@ -597,10 +597,9 @@
 /* ═══════════════════════════════════════
    STATE
 ═══════════════════════════════════════ */
-let sources = JSON.parse(localStorage.getItem('notify_sources') || '[]');
-let received = JSON.parse(localStorage.getItem('notify_received') || '[]');
-let settings = JSON.parse(localStorage.getItem('notify_settings') || '{}');
-let timers = {};
+let sources   = JSON.parse(localStorage.getItem('notify_sources')   || '[]');
+let received  = JSON.parse(localStorage.getItem('notify_received')  || '[]');
+let settings  = JSON.parse(localStorage.getItem('notify_settings')  || '{}');
 
 const DAYS_MAP = ['dim','lun','mar','mer','jeu','ven','sam'];
 
@@ -785,32 +784,19 @@ function triggerBrowserNotif(source) {
 }
 
 /* ═══════════════════════════════════════
-   SCHEDULING
+   SCHEDULING — système hybride
+   1) Au démarrage : rattrape les notifs manquées
+   2) Toutes les minutes : vérifie si une notif doit partir
+   3) setTimeout de précision pour l'heure exacte
 ═══════════════════════════════════════ */
-function scheduleAll() {
-  Object.values(timers).forEach(clearTimeout);
-  timers = {};
-  sources.forEach(s => {
-    if (!s.enabled) return;
-    scheduleSource(s);
-  });
-}
 
-function scheduleSource(s) {
-  const now = new Date();
-  const [h, m] = s.time.split(':').map(Number);
-  const target = new Date();
-  target.setHours(h, m, 0, 0);
-  if (target <= now) target.setDate(target.getDate() + 1);
-  const delay = target - now;
+// lastFired stocke { sourceId: "YYYY-MM-DD" } — le dernier jour où la notif a été envoyée
+let lastFired = JSON.parse(localStorage.getItem('notify_lastFired') || '{}');
+function saveLastFired() { localStorage.setItem('notify_lastFired', JSON.stringify(lastFired)); }
 
-  timers[s.id] = setTimeout(() => {
-    const today = new Date().getDay();
-    if (shouldFireToday(s)) {
-      addNotif(s);
-    }
-    if (s.repeat !== 'once') scheduleSource(s);
-  }, delay);
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
 function shouldFireToday(s) {
@@ -818,8 +804,92 @@ function shouldFireToday(s) {
   if (s.repeat === 'daily') return true;
   if (s.repeat === 'weekdays') return d >= 1 && d <= 5;
   if (s.repeat === 'custom') return (s.days || []).includes(d);
+  if (s.repeat === 'once') return lastFired[s.id] !== 'fired';
   return true;
 }
+
+function alreadyFiredToday(s) {
+  return lastFired[s.id] === todayStr();
+}
+
+function markFired(s) {
+  lastFired[s.id] = s.repeat === 'once' ? 'fired' : todayStr();
+  saveLastFired();
+}
+
+// Vérifie si une source aurait dû sonner (y compris pendant que l'app était fermée)
+function checkSource(s, now) {
+  if (!s.enabled) return;
+  if (!shouldFireToday(s)) return;
+  if (alreadyFiredToday(s)) return;
+
+  const [h, m] = s.time.split(':').map(Number);
+  const fireTime = new Date(now);
+  fireTime.setHours(h, m, 0, 0);
+
+  if (now >= fireTime) {
+    // L'heure est passée aujourd'hui et on n'a pas encore déclenché
+    addNotif(s);
+    markFired(s);
+  }
+}
+
+// Vérifie TOUTES les sources — appelé au démarrage et toutes les minutes
+function checkAllSources() {
+  const now = new Date();
+  sources.forEach(s => checkSource(s, now));
+}
+
+// setTimeout de précision : se déclenche à l'heure exacte si l'app est ouverte
+let precisionTimers = {};
+function scheduleAll() {
+  Object.values(precisionTimers).forEach(clearTimeout);
+  precisionTimers = {};
+
+  // Rattrape d'abord les notifs manquées
+  checkAllSources();
+
+  // Programme un setTimeout précis pour chaque source
+  sources.forEach(s => {
+    if (!s.enabled) return;
+    if (!shouldFireToday(s)) return;
+    if (alreadyFiredToday(s)) return;
+
+    const now = new Date();
+    const [h, m] = s.time.split(':').map(Number);
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+
+    // Si l'heure d'aujourd'hui n'est pas encore passée
+    if (target > now) {
+      const delay = target - now;
+      precisionTimers[s.id] = setTimeout(() => {
+        if (shouldFireToday(s) && !alreadyFiredToday(s)) {
+          addNotif(s);
+          markFired(s);
+        }
+        // Re-programme pour demain
+        delete precisionTimers[s.id];
+        setTimeout(() => scheduleAll(), 60000);
+      }, delay);
+    }
+  });
+}
+
+// Vérification toutes les minutes (filet de sécurité)
+setInterval(checkAllSources, 60 * 1000);
+
+// Vérification au retour sur l'app (sortie arrière-plan)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    // Recharge les données depuis localStorage au cas où une autre instance aurait écrit
+    sources   = JSON.parse(localStorage.getItem('notify_sources')   || '[]');
+    received  = JSON.parse(localStorage.getItem('notify_received')  || '[]');
+    lastFired = JSON.parse(localStorage.getItem('notify_lastFired') || '{}');
+    checkAllSources();
+    renderNotifs();
+  }
+});
 
 /* ═══════════════════════════════════════
    SOURCES UI
