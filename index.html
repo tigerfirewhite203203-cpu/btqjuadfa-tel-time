@@ -838,20 +838,42 @@ function renderSources() {
       : s.repeat === 'weekdays' ? 'Lun–Ven'
       : s.repeat === 'custom' ? (s.days||[]).map(d=>DAYS_MAP[d]).join(', ')
       : 'Une fois';
+    const isOn = s.enabled !== false;
     el.innerHTML = `
-      <div class="source-emoji">${s.emoji || '🔔'}</div>
-      <div class="source-info">
+      <div class="source-emoji" style="opacity:${isOn?1:0.35}">${s.emoji || '🔔'}</div>
+      <div class="source-info" style="opacity:${isOn?1:0.45};cursor:pointer">
         <div class="source-name">${s.name}</div>
         <div class="source-detail">${s.time} · ${daysLabel}</div>
       </div>
-      <button class="source-delete" data-id="${s.id}" title="Supprimer">🗑</button>
+      <label class="toggle" title="${isOn?'Désactiver':'Activer'}">
+        <input type="checkbox" class="source-toggle" data-id="${s.id}" ${isOn?'checked':''}/>
+        <span class="toggle-slider"></span>
+      </label>
+      <button class="source-edit" data-id="${s.id}" title="Modifier" style="background:none;border:none;color:var(--text-dim);font-size:15px;cursor:pointer;padding:4px;margin-left:2px;">✎</button>
+      <button class="source-delete" data-id="${s.id}" title="Supprimer" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;padding:4px;">🗑</button>
     `;
-    el.querySelector('.source-info').onclick = () => editSource(s.id);
     list.appendChild(el);
+  });
+
+  list.querySelectorAll('.source-toggle').forEach(cb => {
+    cb.onchange = () => toggleSource(cb.dataset.id, cb.checked);
+  });
+  list.querySelectorAll('.source-edit').forEach(btn => {
+    btn.onclick = () => editSource(btn.dataset.id);
   });
   list.querySelectorAll('.source-delete').forEach(btn => {
     btn.onclick = () => deleteSource(btn.dataset.id);
   });
+}
+
+function toggleSource(id, enabled) {
+  const s = sources.find(x => String(x.id) === String(id));
+  if (!s) return;
+  s.enabled = enabled;
+  saveSources();
+  scheduleAll();
+  renderSources();
+  showToast(enabled ? `${s.name} activée ✓` : `${s.name} mise en pause`);
 }
 
 function deleteSource(id) {
