@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="NeonClock"/>
+  <title>NeonClock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --neon-pink: #ff2d95;
+      --neon-cyan: #00f0ff;
+      --neon-purple: #b44aff;
+      --neon-green: #39ff14;
+      --neon-orange: #ff6a00;
+      --neon-yellow: #ffe600;
+      --glass: rgba(255,255,255,.03);
+      --glass-border: rgba(255,255,255,.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Rajdhani', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      position: relative;
+      cursor: none;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0,240,255,.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,240,255,.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridScroll 20s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+    @keyframes gridScroll {
+      to { transform: translateY(40px); }
+    }
+
+    /* Ambient glow orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: .15;
+      pointer-events: none;
+      z-index: 0;
+      animation: orbFloat 12s ease-in-out infinite alternate;
+    }
+    .orb-1 { width: 300px; height: 300px; background: var(--neon-pink); top: -50px; left: -80px; }
+    .orb-2 { width: 250px; height: 250px; background: var(--neon-cyan); bottom: -40px; right: -60px; animation-delay: -4s; }
+    .orb-3 { width: 200px; height: 200px; background: var(--neon-purple); top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: -8s; }
+    @keyframes orbFloat {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(20px, -30px) scale(1.1); }
+      100% { transform: translate(-15px, 20px) scale(.95); }
+    }
+
+    .clock-container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2rem;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    /* Main time display */
+    .time-main {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: clamp(4.5rem, 22vw, 9rem);
+      line-height: 1;
+      letter-spacing: .04em;
+      color: #fff;
+      text-shadow:
+        0 0 10px var(--neon-cyan),
+        0 0 30px var(--neon-cyan),
+        0 0 60px rgba(0,240,255,.3),
+        0 0 120px rgba(0,240,255,.15);
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .time-main .blink {
+      animation: colonBlink 1s step-end infinite;
+    }
+    @keyframes colonBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .2; }
+    }
+
+    /* Seconds arc */
+    .seconds-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: calc(100% + 50px);
+      height: calc(100% + 50px);
+      pointer-events: none;
+    }
+    .seconds-ring svg {
+      width: 100%;
+      height: 100%;
+    }
+    .sec-track { fill: none; stroke: rgba(255,255,255,.04); stroke-width: 2; }
+    .sec-progress { fill: none; stroke: var(--neon-pink); stroke-width: 2.5; stroke-linecap: round; transition: stroke-dashoffset .3s linear; filter: drop-shadow(0 0 6px var(--neon-pink)); }
+
+    /* Date & day */
+    .date-line {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 300;
+      font-size: clamp(.85rem, 3.5vw, 1.15rem);
+      letter-spacing: .35em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.3);
+      margin-top: .5rem;
+    }
+    .date-line .day-name {
+      color: var(--neon-pink);
+      font-weight: 600;
+      text-shadow: 0 0 15px rgba(255,45,149,.5);
+    }
+
+    /* Weather / info bar */
+    .info-bar {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+      padding: .7rem 1.5rem;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 50px;
+      backdrop-filter: blur(20px);
+    }
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: clamp(.6rem, 2.5vw, .78rem);
+      color: rgba(255,255,255,.4);
+      letter-spacing: .08em;
+    }
+    .info-item .ii-icon { font-size: 1rem; }
+    .info-item .ii-val { color: rgba(255,255,255,.6); font-weight: 500; }
+
+    /* Alarm section */
+    .alarm-section {
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 340px;
+    }
+    .alarm-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .85rem 1.3rem;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      cursor: pointer;
+      transition: .2s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .alarm-toggle:hover { border-color: rgba(255,45,149,.3); }
+    .alarm-toggle:active { transform: scale(.98); }
+    .alarm-left {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+    }
+    .alarm-icon { font-size: 1.2rem; }
+    .alarm-label { font-size: .75rem; color: rgba(255,255,255,.4); letter-spacing: .1em; }
+    .alarm-time-display {
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 1rem;
+      color: rgba(255,255,255,.25);
+      letter-spacing: .05em;
+    }
+    .alarm-toggle.active .alarm-time-display {
+      color: var(--neon-pink);
+      text-shadow: 0 0 10px rgba(255,45,149,.5);
+    }
+    .alarm-toggle.active { border-color: rgba(255,45,149,.25); }
+
+    /* Switch */
+    .switch {
+      width: 44px; height: 24px;
+      background: rgba(255,255,255,.08);
+      border-radius: 12px;
+      position: relative;
+      transition: .3s;
+      flex-shrink: 0;
+    }
+    .switch::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.3);
+      transition: .3s;
+    }
+    .switch.on {
+      background: var(--neon-pink);
+      box-shadow: 0 0 15px rgba(255,45,149,.4);
+    }
+    .switch.on::after {
+      left: 23px;
+      background: #fff;
+    }
+
+    /* Alarm picker overlay */
+    .picker-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      backdrop-filter: blur(20px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .picker-overlay.open { display: flex; }
+    .picker-card {
+      background: rgba(15,15,25,.95);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+      animation: popUp .25s ease;
+    }
+    @keyframes popUp { from { opacity: 0; transform: scale(.92); } }
+    .picker-title {
+      font-family: 'Orbitron', monospace;
+      font-size: .8rem;
+      color: var(--neon-cyan);
+      letter-spacing: .2em;
+      margin-bottom: 1.5rem;
+      text-shadow: 0 0 10px rgba(0,240,255,.3);
+    }
+    .picker-wheels {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      margin-bottom: 2rem;
+    }
+    .wheel-col { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+    .wheel-btn {
+      width: 50px; height: 36px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      color: rgba(255,255,255,.4);
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: .15s;
+    }
+    .wheel-btn:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+    .wheel-btn:active { transform: scale(.93); }
+    .wheel-val {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 2.5rem;
+      color: #fff;
+      text-shadow: 0 0 15px var(--neon-cyan), 0 0 40px rgba(0,240,255,.2);
+      width: 70px;
+      text-align: center;
+      line-height: 1;
+      padding: .3rem 0;
+    }
+    .wheel-sep {
+      font-family: 'Orbitron', monospace;
+      font-size: 2.5rem;
+      color: var(--neon-pink);
+      text-shadow: 0 0 10px rgba(255,45,149,.4);
+      padding-top: .2rem;
+    }
+    .picker-btns { display: flex; gap: .75rem; }
+    .pk-btn {
+      flex: 1;
+      padding: .8rem;
+      border-radius: 12px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      font-size: .85rem;
+      letter-spacing: .1em;
+      cursor: pointer;
+      transition: .2s;
+      border: none;
+    }
+    .pk-btn:active { transform: scale(.96); }
+    .pk-cancel { background: rgba(255,255,255,.06); color: rgba(255,255,255,.5); }
+    .pk-cancel:hover { background: rgba(255,255,255,.1); }
+    .pk-confirm { background: var(--neon-pink); color: #fff; box-shadow: 0 0 20px rgba(255,45,149,.3); }
+    .pk-confirm:hover { filter: brightness(1.15); }
+
+    /* Alarm ringing overlay */
+    .ring-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5,5,10,.95);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      padding: 2rem;
+    }
+    .ring-overlay.open { display: flex; }
+    .ring-time {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: clamp(4rem, 20vw, 7rem);
+      color: #fff;
+      animation: ringGlow 1s ease infinite alternate;
+    }
+    @keyframes ringGlow {
+      from { text-shadow: 0 0 20px var(--neon-pink), 0 0 60px var(--neon-pink), 0 0 100px rgba(255,45,149,.4); }
+      to { text-shadow: 0 0 40px var(--neon-cyan), 0 0 80px var(--neon-cyan), 0 0 140px rgba(0,240,255,.4); }
+    }
+    .ring-label {
+      font-size: 1rem;
+      color: rgba(255,255,255,.5);
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      animation: ringPulse 1.5s ease infinite;
+    }
+    @keyframes ringPulse { 0%,100%{opacity:1;}50%{opacity:.3;} }
+    .ring-icon {
+      font-size: 4rem;
+      animation: ringShake .4s ease infinite alternate;
+    }
+    @keyframes ringShake {
+      from { transform: rotate(-15deg); }
+      to { transform: rotate(15deg); }
+    }
+    .ring-stop-btn {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--neon-pink);
+      border: none;
+      font-size: 2rem;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 0 30px rgba(255,45,149,.5);
+      animation: stopPulse 1.5s ease infinite;
+      transition: .2s;
+    }
+    @keyframes stopPulse {
+      0%,100% { box-shadow: 0 0 30px rgba(255,45,149,.5); }
+      50% { box-shadow: 0 0 60px rgba(255,45,149,.8), 0 0 100px rgba(255,45,149,.3); }
+    }
+    .ring-stop-btn:active { transform: scale(.9); }
+
+    /* Keep screen awake hint */
+    .wake-hint {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: .55rem;
+      color: rgba(255,255,255,.12);
+      letter-spacing: .15em;
+      z-index: 1;
+      text-align: center;
+    }
+
+    /* Tap to toggle visibility of alarm etc */
+    .fade-hide { opacity: 0; transition: opacity .4s; pointer-events: none; }
+    .fade-show { opacity: 1; transition: opacity .4s; pointer-events: auto; }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="clock-container" id="clock-container">
+  <!-- Time -->
+  <div class="time-main" id="time-main">
+    <span id="hours">00</span><span class="blink">:</span><span id="minutes">00</span>
+    <div class="seconds-ring" id="sec-ring">
+      <svg viewBox="0 0 200 200">
+        <circle class="sec-track" cx="100" cy="100" r="96"/>
+        <circle class="sec-progress" id="sec-arc" cx="100" cy="100" r="96"
+          stroke-dasharray="603.19" stroke-dashoffset="603.19"
+          transform="rotate(-90 100 100)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Date -->
+  <div class="date-line" id="date-line">
+    <span class="day-name" id="day-name">—</span> · <span id="full-date">—</span>
+  </div>
+
+  <!-- Info bar -->
+  <div class="info-bar" id="info-bar">
+    <div class="info-item"><span class="ii-icon">🔋</span><span class="ii-val" id="battery-val">—</span></div>
+    <div class="info-item"><span class="ii-icon">📶</span><span class="ii-val" id="network-val">Online</span></div>
+    <div class="info-item"><span class="ii-icon">🌡️</span><span class="ii-val" id="temp-val">—</span></div>
+  </div>
+
+  <!-- Alarm -->
+  <div class="alarm-section" id="alarm-section">
+    <div class="alarm-toggle" id="alarm-toggle" onclick="openPicker()">
+      <div class="alarm-left">
+        <span class="alarm-icon">⏰</span>
+        <span class="alarm-label">ALARME</span>
+      </div>
+      <div class="alarm-time-display" id="alarm-time-display">07:00</div>
+      <div class="switch" id="alarm-switch" onclick="event.stopPropagation();toggleAlarm()"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Picker -->
+<div class="picker-overlay" id="picker-overlay">
+  <div class="picker-card">
+    <div class="picker-title">RÉGLER L'ALARME</div>
+    <div class="picker-wheels">
+      <div class="wheel-col">
+        <button class="wheel-btn" onclick="adjustH(1)">▲</button>
+        <div class="wheel-val" id="pick-h">07</div>
+        <button class="wheel-btn" onclick="adjustH(-1)">▼</button>
+      </div>
+      <div class="wheel-sep">:</div>
+      <div class="wheel-col">
+        <button class="wheel-btn" onclick="adjustM(1)">▲</button>
+        <div class="wheel-val" id="pick-m">00</div>
+        <button class="wheel-btn" onclick="adjustM(-1)">▼</button>
+      </div>
+    </div>
+    <div class="picker-btns">
+      <button class="pk-btn pk-cancel" onclick="closePicker()">Annuler</button>
+      <button class="pk-btn pk-confirm" onclick="confirmAlarm()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ring -->
+<div class="ring-overlay" id="ring-overlay">
+  <div class="ring-icon">🔔</div>
+  <div class="ring-time" id="ring-time">07:00</div>
+  <div class="ring-label">RÉVEIL</div>
+  <button class="ring-stop-btn" onclick="stopAlarm()">✕</button>
+</div>
+
+<div class="wake-hint">Appuie n'importe où pour masquer · écran toujours allumé</div>
+
+<script>
+'use strict';
+
+// ── STATE ──
+let alarmH = 7, alarmM = 0;
+let alarmOn = false;
+let alarmRinging = false;
+let alarmAudio = null;
+let pickH = 7, pickM = 0;
+let uiHidden = false;
+let wakeLock = null;
+
+const days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const CIRC = 2 * Math.PI * 96; // ~603.19
+
+// ── CLOCK ──
+function tick() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = now.getSeconds();
+
+  document.getElementById('hours').textContent = h;
+  document.getElementById('minutes').textContent = m;
+
+  // Seconds arc
+  const offset = CIRC - (CIRC * s / 60);
+  document.getElementById('sec-arc').style.strokeDashoffset = offset;
+
+  // Date
+  document.getElementById('day-name').textContent = days[now.getDay()];
+  document.getElementById('full-date').textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+  // Alarm check
+  if (alarmOn && !alarmRinging && now.getHours() === alarmH && now.getMinutes() === alarmM && s === 0) {
+    triggerAlarm();
+  }
+}
+tick();
+setInterval(tick, 1000);
+
+// ── BATTERY ──
+async function initBattery() {
+  try {
+    if ('getBattery' in navigator) {
+      const bat = await navigator.getBattery();
+      const update = () => {
+        const pct = Math.round(bat.level * 100);
+        const chr = bat.charging ? '⚡' : '';
+        document.getElementById('battery-val').textContent = chr + pct + '%';
+      };
+      update();
+      bat.addEventListener('levelchange', update);
+      bat.addEventListener('chargingchange', update);
+    }
+  } catch (e) {}
+}
+initBattery();
+
+// ── NETWORK ──
+function updateNet() {
+  document.getElementById('network-val').textContent = navigator.onLine ? 'En ligne' : 'Hors ligne';
+}
+updateNet();
+window.addEventListener('online', updateNet);
+window.addEventListener('offline', updateNet);
+
+// ── TEMPERATURE (simple estimate from date, no API needed) ──
+function fakeTemp() {
+  const m = new Date().getMonth();
+  const temps = [3, 5, 10, 14, 18, 23, 26, 25, 21, 15, 8, 4]; // approx Lyon
+  document.getElementById('temp-val').textContent = '~' + temps[m] + '°C';
+}
+fakeTemp();
+
+// ── ALARM ──
+function toggleAlarm() {
+  alarmOn = !alarmOn;
+  document.getElementById('alarm-switch').classList.toggle('on', alarmOn);
+  document.getElementById('alarm-toggle').classList.toggle('active', alarmOn);
+}
+function openPicker() {
+  pickH = alarmH; pickM = alarmM;
+  document.getElementById('pick-h').textContent = String(pickH).padStart(2, '0');
+  document.getElementById('pick-m').textContent = String(pickM).padStart(2, '0');
+  document.getElementById('picker-overlay').classList.add('open');
+}
+function closePicker() { document.getElementById('picker-overlay').classList.remove('open'); }
+function adjustH(d) { pickH = (pickH + d + 24) % 24; document.getElementById('pick-h').textContent = String(pickH).padStart(2, '0'); }
+function adjustM(d) { pickM = (pickM + d + 60) % 60; document.getElementById('pick-m').textContent = String(pickM).padStart(2, '0'); }
+function confirmAlarm() {
+  alarmH = pickH; alarmM = pickM;
+  document.getElementById('alarm-time-display').textContent = String(alarmH).padStart(2, '0') + ':' + String(alarmM).padStart(2, '0');
+  alarmOn = true;
+  document.getElementById('alarm-switch').classList.add('on');
+  document.getElementById('alarm-toggle').classList.add('active');
+  closePicker();
+}
+function triggerAlarm() {
+  alarmRinging = true;
+  document.getElementById('ring-time').textContent = String(alarmH).padStart(2, '0') + ':' + String(alarmM).padStart(2, '0');
+  document.getElementById('ring-overlay').classList.add('open');
+  // Sound — generate beep with Web Audio API
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep() {
+      if (!alarmRinging) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'square';
+      gain.gain.value = 0.15;
+      osc.start(); osc.stop(ctx.currentTime + 0.15);
+      setTimeout(() => { if (alarmRinging) beep(); }, 600);
+    }
+    beep();
+    alarmAudio = ctx;
+  } catch (e) {}
+}
+function stopAlarm() {
+  alarmRinging = false;
+  alarmOn = false;
+  document.getElementById('ring-overlay').classList.remove('open');
+  document.getElementById('alarm-switch').classList.remove('on');
+  document.getElementById('alarm-toggle').classList.remove('active');
+  if (alarmAudio) { try { alarmAudio.close(); } catch (e) {} alarmAudio = null; }
+}
+
+// ── TAP TO HIDE UI (clean clock mode) ──
+document.body.addEventListener('click', (e) => {
+  if (e.target.closest('.alarm-toggle, .alarm-section, .picker-overlay, .ring-overlay, .switch')) return;
+  uiHidden = !uiHidden;
+  ['info-bar', 'alarm-section'].forEach(id => {
+    document.getElementById(id).className = document.getElementById(id).className.replace(/fade-\w+/g, '') + (uiHidden ? ' fade-hide' : ' fade-show');
+  });
+});
+
+// ── WAKE LOCK (keep screen on) ──
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch (e) {}
+}
+requestWakeLock();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+</script>
+</body>
+</html>
