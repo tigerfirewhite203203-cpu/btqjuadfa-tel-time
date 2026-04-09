@@ -2,13 +2,13 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="NeonClock"/>
   <title>NeonClock</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@300;400;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --bg: #0a0a0f;
@@ -16,625 +16,514 @@
       --neon-cyan: #00f0ff;
       --neon-purple: #b44aff;
       --neon-green: #39ff14;
-      --neon-orange: #ff6a00;
-      --neon-yellow: #ffe600;
-      --glass: rgba(255,255,255,.03);
-      --glass-border: rgba(255,255,255,.06);
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
-
+    html, body {
+      height: 100%; width: 100%;
+      overflow: hidden;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-text-size-adjust: 100%;
+    }
     body {
       background: var(--bg);
-      font-family: 'Rajdhani', sans-serif;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100dvh;
+      font-family: 'Rajdhani', sans-serif;
       position: relative;
-      cursor: none;
     }
 
-    /* Animated grid background */
-    body::before {
+    /* Force landscape */
+    .app {
+      width: 100vw; height: 100dvh;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    @media (orientation: portrait) {
+      .app { transform: rotate(90deg); transform-origin: center center; width: 100dvh; height: 100vw; }
+    }
+
+    .app::before {
       content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        linear-gradient(rgba(0,240,255,.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,240,255,.02) 1px, transparent 1px);
+      position: absolute; inset: 0;
+      background: linear-gradient(rgba(0,240,255,.015) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,.015) 1px, transparent 1px);
       background-size: 40px 40px;
-      animation: gridScroll 20s linear infinite;
-      pointer-events: none;
-      z-index: 0;
-    }
-    @keyframes gridScroll {
-      to { transform: translateY(40px); }
-    }
-
-    /* Ambient glow orbs */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: .15;
-      pointer-events: none;
-      z-index: 0;
-      animation: orbFloat 12s ease-in-out infinite alternate;
-    }
-    .orb-1 { width: 300px; height: 300px; background: var(--neon-pink); top: -50px; left: -80px; }
-    .orb-2 { width: 250px; height: 250px; background: var(--neon-cyan); bottom: -40px; right: -60px; animation-delay: -4s; }
-    .orb-3 { width: 200px; height: 200px; background: var(--neon-purple); top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: -8s; }
-    @keyframes orbFloat {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(20px, -30px) scale(1.1); }
-      100% { transform: translate(-15px, 20px) scale(.95); }
-    }
-
-    .clock-container {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-      padding: 2rem;
-      width: 100%;
-      max-width: 500px;
-    }
-
-    /* Main time display */
-    .time-main {
-      font-family: 'Orbitron', monospace;
-      font-weight: 900;
-      font-size: clamp(4.5rem, 22vw, 9rem);
-      line-height: 1;
-      letter-spacing: .04em;
-      color: #fff;
-      text-shadow:
-        0 0 10px var(--neon-cyan),
-        0 0 30px var(--neon-cyan),
-        0 0 60px rgba(0,240,255,.3),
-        0 0 120px rgba(0,240,255,.15);
-      position: relative;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .time-main .blink {
-      animation: colonBlink 1s step-end infinite;
-    }
-    @keyframes colonBlink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: .2; }
-    }
-
-    /* Seconds arc */
-    .seconds-ring {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: calc(100% + 50px);
-      height: calc(100% + 50px);
       pointer-events: none;
     }
-    .seconds-ring svg {
-      width: 100%;
-      height: 100%;
-    }
-    .sec-track { fill: none; stroke: rgba(255,255,255,.04); stroke-width: 2; }
-    .sec-progress { fill: none; stroke: var(--neon-pink); stroke-width: 2.5; stroke-linecap: round; transition: stroke-dashoffset .3s linear; filter: drop-shadow(0 0 6px var(--neon-pink)); }
 
-    /* Date & day */
-    .date-line {
-      font-family: 'Rajdhani', sans-serif;
-      font-weight: 300;
-      font-size: clamp(.85rem, 3.5vw, 1.15rem);
-      letter-spacing: .35em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.3);
-      margin-top: .5rem;
-    }
-    .date-line .day-name {
-      color: var(--neon-pink);
-      font-weight: 600;
-      text-shadow: 0 0 15px rgba(255,45,149,.5);
-    }
+    .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .12; pointer-events: none; animation: orbF 12s ease-in-out infinite alternate; }
+    .orb-1 { width: 250px; height: 250px; background: var(--neon-pink); top: -60px; left: -80px; }
+    .orb-2 { width: 200px; height: 200px; background: var(--neon-cyan); bottom: -40px; right: -60px; animation-delay: -4s; }
+    @keyframes orbF { 0%{transform:translate(0,0) scale(1);}100%{transform:translate(15px,-20px) scale(1.08);} }
 
-    /* Weather / info bar */
-    .info-bar {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      margin-top: 1.5rem;
-      padding: .7rem 1.5rem;
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      border-radius: 50px;
-      backdrop-filter: blur(20px);
-    }
-    .info-item {
-      display: flex;
-      align-items: center;
-      gap: .4rem;
-      font-size: clamp(.6rem, 2.5vw, .78rem);
-      color: rgba(255,255,255,.4);
-      letter-spacing: .08em;
-    }
-    .info-item .ii-icon { font-size: 1rem; }
-    .info-item .ii-val { color: rgba(255,255,255,.6); font-weight: 500; }
+    /* Clock views */
+    .clock-view { display: none; width: 100%; height: 100%; align-items: center; justify-content: center; flex-direction: column; position: relative; z-index: 1; }
+    .clock-view.active { display: flex; }
 
-    /* Alarm section */
-    .alarm-section {
-      margin-top: 2rem;
-      width: 100%;
-      max-width: 340px;
+    /* ── CYBER ── */
+    #mode-cyber { gap: .4rem; }
+    .cyber-time {
+      font-family: 'Orbitron', monospace; font-weight: 900;
+      font-size: clamp(5rem, 18vw, 10rem);
+      color: #fff; line-height: 1; letter-spacing: .05em;
+      text-shadow: 0 0 10px var(--neon-cyan), 0 0 30px var(--neon-cyan), 0 0 60px rgba(0,240,255,.25);
     }
-    .alarm-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: .85rem 1.3rem;
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      border-radius: 16px;
-      backdrop-filter: blur(20px);
-      cursor: pointer;
-      transition: .2s;
-      user-select: none;
-      -webkit-user-select: none;
+    .cyber-time .cb { animation: cBlink 1s step-end infinite; }
+    @keyframes cBlink { 0%,100%{opacity:1;}50%{opacity:.15;} }
+    .cyber-date {
+      font-weight: 300; font-size: clamp(.7rem, 2.5vw, 1rem);
+      letter-spacing: .35em; text-transform: uppercase; color: rgba(255,255,255,.25);
     }
-    .alarm-toggle:hover { border-color: rgba(255,45,149,.3); }
-    .alarm-toggle:active { transform: scale(.98); }
-    .alarm-left {
-      display: flex;
-      align-items: center;
-      gap: .7rem;
-    }
-    .alarm-icon { font-size: 1.2rem; }
-    .alarm-label { font-size: .75rem; color: rgba(255,255,255,.4); letter-spacing: .1em; }
-    .alarm-time-display {
-      font-family: 'Orbitron', monospace;
-      font-weight: 700;
-      font-size: 1rem;
-      color: rgba(255,255,255,.25);
-      letter-spacing: .05em;
-    }
-    .alarm-toggle.active .alarm-time-display {
-      color: var(--neon-pink);
-      text-shadow: 0 0 10px rgba(255,45,149,.5);
-    }
-    .alarm-toggle.active { border-color: rgba(255,45,149,.25); }
+    .cyber-date .cd-day { color: var(--neon-cyan); font-weight: 600; text-shadow: 0 0 12px rgba(0,240,255,.4); }
 
-    /* Switch */
-    .switch {
-      width: 44px; height: 24px;
+    /* ── MINIMAL ── */
+    #mode-minimal { gap: .3rem; }
+    .mini-time {
+      font-family: 'Nunito', sans-serif; font-weight: 800;
+      font-size: clamp(5rem, 20vw, 11rem);
+      color: #2a2a35; line-height: 1; letter-spacing: -.03em;
+    }
+    .mini-date {
+      font-family: 'Nunito', sans-serif; font-weight: 400;
+      font-size: clamp(.65rem, 2vw, .9rem);
+      color: #1e1e26; letter-spacing: .2em; text-transform: uppercase;
+    }
+    #mode-minimal .bottom-bar { opacity: .25; }
+    #mode-minimal .bottom-bar .bat-fill { background: #3a3a48 !important; }
+    #mode-minimal .bottom-bar .bat-text { color: #2a2a35 !important; }
+
+    /* ── CUSTOM ── */
+    #mode-custom { gap: .4rem; }
+    .cust-time {
+      font-family: 'Orbitron', monospace; font-weight: 900;
+      font-size: clamp(5rem, 18vw, 10rem);
+      line-height: 1; letter-spacing: .05em; transition: color .5s, text-shadow .5s;
+    }
+    .cust-time .cb { animation: cBlink 1s step-end infinite; }
+    .cust-date { font-weight: 300; font-size: clamp(.7rem, 2.5vw, 1rem); letter-spacing: .35em; text-transform: uppercase; transition: color .5s; }
+
+    /* ── BOTTOM BAR ── */
+    .bottom-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .6rem 1.2rem; z-index: 2;
+    }
+    .bb-left, .bb-right { display: flex; align-items: center; gap: .8rem; }
+
+    /* Battery bar */
+    .bat-bar {
+      width: 56px; height: 22px;
+      background: rgba(255,255,255,.06);
+      border-radius: 5px;
+      position: relative; overflow: hidden;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .bat-bar::after {
+      content: ''; position: absolute;
+      right: -5px; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 9px;
       background: rgba(255,255,255,.08);
-      border-radius: 12px;
-      position: relative;
-      transition: .3s;
-      flex-shrink: 0;
+      border-radius: 0 2px 2px 0;
     }
-    .switch::after {
-      content: '';
-      position: absolute;
-      top: 3px; left: 3px;
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.3);
-      transition: .3s;
+    .bat-fill { height: 100%; border-radius: 4px; background: var(--neon-green); transition: width .5s, background .5s; }
+    .bat-fill.low { background: var(--neon-pink); }
+    .bat-fill.mid { background: #ff9500; }
+    .bat-text {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Rajdhani', sans-serif; font-weight: 700;
+      font-size: .52rem; color: rgba(255,255,255,.85);
+      letter-spacing: .04em; text-shadow: 0 0 3px rgba(0,0,0,.9);
     }
-    .switch.on {
-      background: var(--neon-pink);
-      box-shadow: 0 0 15px rgba(255,45,149,.4);
-    }
-    .switch.on::after {
-      left: 23px;
-      background: #fff;
-    }
+    .info-chip { font-size: .6rem; color: rgba(255,255,255,.3); letter-spacing: .06em; display: flex; align-items: center; gap: .3rem; }
 
-    /* Alarm picker overlay */
-    .picker-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.85);
-      backdrop-filter: blur(20px);
-      z-index: 100;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
+    /* Gear */
+    .gear-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; cursor: pointer; transition: .2s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .picker-overlay.open { display: flex; }
-    .picker-card {
-      background: rgba(15,15,25,.95);
-      border: 1px solid var(--glass-border);
-      border-radius: 24px;
-      padding: 2rem;
-      width: 100%;
-      max-width: 320px;
-      text-align: center;
-      animation: popUp .25s ease;
-    }
-    @keyframes popUp { from { opacity: 0; transform: scale(.92); } }
-    .picker-title {
-      font-family: 'Orbitron', monospace;
-      font-size: .8rem;
-      color: var(--neon-cyan);
-      letter-spacing: .2em;
-      margin-bottom: 1.5rem;
-      text-shadow: 0 0 10px rgba(0,240,255,.3);
-    }
-    .picker-wheels {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: .5rem;
-      margin-bottom: 2rem;
-    }
-    .wheel-col { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
-    .wheel-btn {
-      width: 50px; height: 36px;
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      border-radius: 10px;
-      color: rgba(255,255,255,.4);
-      font-size: 1.2rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: .15s;
-    }
-    .wheel-btn:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
-    .wheel-btn:active { transform: scale(.93); }
-    .wheel-val {
-      font-family: 'Orbitron', monospace;
-      font-weight: 900;
-      font-size: 2.5rem;
-      color: #fff;
-      text-shadow: 0 0 15px var(--neon-cyan), 0 0 40px rgba(0,240,255,.2);
-      width: 70px;
-      text-align: center;
-      line-height: 1;
-      padding: .3rem 0;
-    }
-    .wheel-sep {
-      font-family: 'Orbitron', monospace;
-      font-size: 2.5rem;
-      color: var(--neon-pink);
-      text-shadow: 0 0 10px rgba(255,45,149,.4);
-      padding-top: .2rem;
-    }
-    .picker-btns { display: flex; gap: .75rem; }
-    .pk-btn {
-      flex: 1;
-      padding: .8rem;
-      border-radius: 12px;
-      font-family: 'Rajdhani', sans-serif;
-      font-weight: 600;
-      font-size: .85rem;
-      letter-spacing: .1em;
-      cursor: pointer;
-      transition: .2s;
-      border: none;
-    }
-    .pk-btn:active { transform: scale(.96); }
-    .pk-cancel { background: rgba(255,255,255,.06); color: rgba(255,255,255,.5); }
-    .pk-cancel:hover { background: rgba(255,255,255,.1); }
-    .pk-confirm { background: var(--neon-pink); color: #fff; box-shadow: 0 0 20px rgba(255,45,149,.3); }
-    .pk-confirm:hover { filter: brightness(1.15); }
+    .gear-btn:active { transform: scale(.9); background: rgba(255,255,255,.08); }
 
-    /* Alarm ringing overlay */
-    .ring-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(5,5,10,.95);
-      z-index: 200;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2rem;
-      padding: 2rem;
+    /* ── SETTINGS ── */
+    .settings-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.92); backdrop-filter: blur(25px);
+      z-index: 50; display: none; align-items: center; justify-content: center; padding: 1rem;
     }
+    .settings-overlay.open { display: flex; }
+    @media (orientation: portrait) {
+      .settings-overlay.open {
+        width: 100dvh; height: 100vw;
+        position: fixed; top: 50%; left: 50%;
+        transform: rotate(90deg) translate(-50%, -50%);
+        transform-origin: 0 0;
+      }
+    }
+    .settings-card {
+      background: rgba(15,15,22,.97); border: 1px solid rgba(255,255,255,.06);
+      border-radius: 24px; padding: 1.5rem;
+      width: 100%; max-width: 420px; max-height: 90%; overflow-y: auto;
+      animation: popUp .2s ease;
+    }
+    @keyframes popUp { from { opacity: 0; transform: scale(.93); } }
+    .st-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .st-title { font-family: 'Orbitron', monospace; font-size: .75rem; letter-spacing: .2em; color: var(--neon-cyan); text-shadow: 0 0 10px rgba(0,240,255,.3); }
+    .st-close { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.05); border: none; color: rgba(255,255,255,.4); font-size: .9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .st-close:active { transform: scale(.9); }
+    .st-section { margin-bottom: 1.5rem; }
+    .st-label { font-size: .55rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.25); margin-bottom: .7rem; }
+
+    .mode-cards { display: flex; gap: .6rem; }
+    .mode-card {
+      flex: 1; padding: .85rem .5rem;
+      background: rgba(255,255,255,.02); border: 2px solid rgba(255,255,255,.06);
+      border-radius: 14px; text-align: center; cursor: pointer; transition: .2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mode-card:active { transform: scale(.96); }
+    .mode-card.sel { border-color: var(--neon-cyan); background: rgba(0,240,255,.05); }
+    .mc-icon { font-size: 1.3rem; margin-bottom: .35rem; }
+    .mc-name { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: .7rem; color: #fff; }
+    .mc-desc { font-size: .5rem; color: rgba(255,255,255,.3); margin-top: .15rem; }
+
+    .color-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .color-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid transparent; cursor: pointer; transition: .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .color-dot:active { transform: scale(.88); }
+    .color-dot.sel { border-color: #fff; box-shadow: 0 0 12px rgba(255,255,255,.3); }
+
+    .alarm-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .8rem 1rem; background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.06); border-radius: 14px;
+    }
+    .alarm-row-left { display: flex; align-items: center; gap: .6rem; }
+    .al-icon { font-size: 1.1rem; }
+    .al-time {
+      font-family: 'Orbitron', monospace; font-weight: 700; font-size: .95rem;
+      color: rgba(255,255,255,.5); cursor: pointer; padding: .2rem .4rem;
+      border-radius: 6px; transition: .15s;
+    }
+    .al-time:active { background: rgba(255,255,255,.06); }
+    .al-time.on { color: var(--neon-pink); text-shadow: 0 0 8px rgba(255,45,149,.4); }
+
+    .sw { width: 44px; height: 24px; background: rgba(255,255,255,.08); border-radius: 12px; position: relative; transition: .3s; cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+    .sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,.3); transition: .3s; }
+    .sw.on { background: var(--neon-pink); box-shadow: 0 0 12px rgba(255,45,149,.4); }
+    .sw.on::after { left: 23px; background: #fff; }
+
+    .apicker { display: none; margin-top: .8rem; padding: .8rem; background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; }
+    .apicker.open { display: block; }
+    .ap-wheels { display: flex; align-items: center; justify-content: center; gap: .4rem; }
+    .ap-col { display: flex; flex-direction: column; align-items: center; gap: .2rem; }
+    .ap-btn {
+      width: 44px; height: 30px;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+      border-radius: 8px; color: rgba(255,255,255,.35); font-size: 1rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .ap-btn:active { background: rgba(255,255,255,.08); transform: scale(.94); }
+    .ap-val { font-family: 'Orbitron', monospace; font-weight: 900; font-size: 2rem; color: #fff; text-shadow: 0 0 12px var(--neon-cyan); width: 55px; text-align: center; }
+    .ap-sep { font-family: 'Orbitron', monospace; font-size: 2rem; color: var(--neon-pink); }
+    .ap-confirm { margin-top: .6rem; width: 100%; padding: .6rem; border-radius: 10px; border: none; background: var(--neon-pink); color: #fff; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: .75rem; letter-spacing: .1em; cursor: pointer; }
+    .ap-confirm:active { filter: brightness(1.2); transform: scale(.97); }
+
+    /* Ring */
+    .ring-overlay { position: fixed; inset: 0; background: rgba(5,5,10,.97); z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; }
     .ring-overlay.open { display: flex; }
-    .ring-time {
-      font-family: 'Orbitron', monospace;
-      font-weight: 900;
-      font-size: clamp(4rem, 20vw, 7rem);
-      color: #fff;
-      animation: ringGlow 1s ease infinite alternate;
+    @media (orientation: portrait) {
+      .ring-overlay.open { width: 100dvh; height: 100vw; position: fixed; top: 50%; left: 50%; transform: rotate(90deg) translate(-50%, -50%); transform-origin: 0 0; }
     }
-    @keyframes ringGlow {
-      from { text-shadow: 0 0 20px var(--neon-pink), 0 0 60px var(--neon-pink), 0 0 100px rgba(255,45,149,.4); }
-      to { text-shadow: 0 0 40px var(--neon-cyan), 0 0 80px var(--neon-cyan), 0 0 140px rgba(0,240,255,.4); }
-    }
-    .ring-label {
-      font-size: 1rem;
-      color: rgba(255,255,255,.5);
-      letter-spacing: .3em;
-      text-transform: uppercase;
-      animation: ringPulse 1.5s ease infinite;
-    }
-    @keyframes ringPulse { 0%,100%{opacity:1;}50%{opacity:.3;} }
-    .ring-icon {
-      font-size: 4rem;
-      animation: ringShake .4s ease infinite alternate;
-    }
-    @keyframes ringShake {
-      from { transform: rotate(-15deg); }
-      to { transform: rotate(15deg); }
-    }
-    .ring-stop-btn {
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      background: var(--neon-pink);
-      border: none;
-      font-size: 2rem;
-      color: #fff;
-      cursor: pointer;
-      box-shadow: 0 0 30px rgba(255,45,149,.5);
-      animation: stopPulse 1.5s ease infinite;
-      transition: .2s;
-    }
-    @keyframes stopPulse {
-      0%,100% { box-shadow: 0 0 30px rgba(255,45,149,.5); }
-      50% { box-shadow: 0 0 60px rgba(255,45,149,.8), 0 0 100px rgba(255,45,149,.3); }
-    }
-    .ring-stop-btn:active { transform: scale(.9); }
-
-    /* Keep screen awake hint */
-    .wake-hint {
-      position: fixed;
-      bottom: 1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: .55rem;
-      color: rgba(255,255,255,.12);
-      letter-spacing: .15em;
-      z-index: 1;
-      text-align: center;
-    }
-
-    /* Tap to toggle visibility of alarm etc */
-    .fade-hide { opacity: 0; transition: opacity .4s; pointer-events: none; }
-    .fade-show { opacity: 1; transition: opacity .4s; pointer-events: auto; }
+    .ring-time { font-family: 'Orbitron', monospace; font-weight: 900; font-size: clamp(4rem, 18vw, 7rem); color: #fff; animation: rGlow 1s ease infinite alternate; }
+    @keyframes rGlow { from{text-shadow:0 0 20px var(--neon-pink),0 0 60px var(--neon-pink);}to{text-shadow:0 0 30px var(--neon-cyan),0 0 80px var(--neon-cyan);} }
+    .ring-label { font-size: .9rem; color: rgba(255,255,255,.4); letter-spacing: .3em; text-transform: uppercase; animation: rPulse 1.5s ease infinite; }
+    @keyframes rPulse { 0%,100%{opacity:1;}50%{opacity:.25;} }
+    .ring-icon { font-size: 3.5rem; animation: rShake .4s ease infinite alternate; }
+    @keyframes rShake { from{transform:rotate(-15deg);}to{transform:rotate(15deg);} }
+    .ring-stop { width: 72px; height: 72px; border-radius: 50%; background: var(--neon-pink); border: none; font-size: 1.8rem; color: #fff; cursor: pointer; box-shadow: 0 0 30px rgba(255,45,149,.5); }
+    .ring-stop:active { transform: scale(.88); }
   </style>
 </head>
 <body>
 
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
-<div class="orb orb-3"></div>
+<div class="app" id="app">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
 
-<div class="clock-container" id="clock-container">
-  <!-- Time -->
-  <div class="time-main" id="time-main">
-    <span id="hours">00</span><span class="blink">:</span><span id="minutes">00</span>
-    <div class="seconds-ring" id="sec-ring">
-      <svg viewBox="0 0 200 200">
-        <circle class="sec-track" cx="100" cy="100" r="96"/>
-        <circle class="sec-progress" id="sec-arc" cx="100" cy="100" r="96"
-          stroke-dasharray="603.19" stroke-dashoffset="603.19"
-          transform="rotate(-90 100 100)"/>
-      </svg>
-    </div>
+  <div class="clock-view active" id="mode-cyber">
+    <div class="cyber-time"><span id="c-h">00</span><span class="cb">:</span><span id="c-m">00</span></div>
+    <div class="cyber-date"><span class="cd-day" id="c-day">—</span> · <span id="c-date">—</span></div>
   </div>
 
-  <!-- Date -->
-  <div class="date-line" id="date-line">
-    <span class="day-name" id="day-name">—</span> · <span id="full-date">—</span>
+  <div class="clock-view" id="mode-minimal">
+    <div class="mini-time" id="m-time">00:00</div>
+    <div class="mini-date" id="m-date">—</div>
   </div>
 
-  <!-- Info bar -->
-  <div class="info-bar" id="info-bar">
-    <div class="info-item"><span class="ii-icon">🔋</span><span class="ii-val" id="battery-val">—</span></div>
-    <div class="info-item"><span class="ii-icon">📶</span><span class="ii-val" id="network-val">Online</span></div>
-    <div class="info-item"><span class="ii-icon">🌡️</span><span class="ii-val" id="temp-val">—</span></div>
+  <div class="clock-view" id="mode-custom">
+    <div class="cust-time" id="x-time"><span id="x-h">00</span><span class="cb">:</span><span id="x-m">00</span></div>
+    <div class="cust-date" id="x-date">—</div>
   </div>
 
-  <!-- Alarm -->
-  <div class="alarm-section" id="alarm-section">
-    <div class="alarm-toggle" id="alarm-toggle" onclick="openPicker()">
-      <div class="alarm-left">
-        <span class="alarm-icon">⏰</span>
-        <span class="alarm-label">ALARME</span>
+  <div class="bottom-bar" id="bottom-bar">
+    <div class="bb-left">
+      <div class="bat-bar">
+        <div class="bat-fill" id="bat-fill" style="width:80%"></div>
+        <div class="bat-text" id="bat-text">—</div>
       </div>
-      <div class="alarm-time-display" id="alarm-time-display">07:00</div>
-      <div class="switch" id="alarm-switch" onclick="event.stopPropagation();toggleAlarm()"></div>
+      <div class="info-chip">🌡️ <span id="temp-val">…</span></div>
+    </div>
+    <div class="bb-right">
+      <div class="info-chip">📶 <span id="net-val">—</span></div>
+      <div class="gear-btn" onclick="openSettings()">⚙️</div>
     </div>
   </div>
 </div>
 
-<!-- Picker -->
-<div class="picker-overlay" id="picker-overlay">
-  <div class="picker-card">
-    <div class="picker-title">RÉGLER L'ALARME</div>
-    <div class="picker-wheels">
-      <div class="wheel-col">
-        <button class="wheel-btn" onclick="adjustH(1)">▲</button>
-        <div class="wheel-val" id="pick-h">07</div>
-        <button class="wheel-btn" onclick="adjustH(-1)">▼</button>
-      </div>
-      <div class="wheel-sep">:</div>
-      <div class="wheel-col">
-        <button class="wheel-btn" onclick="adjustM(1)">▲</button>
-        <div class="wheel-val" id="pick-m">00</div>
-        <button class="wheel-btn" onclick="adjustM(-1)">▼</button>
+<!-- SETTINGS -->
+<div class="settings-overlay" id="settings-overlay">
+  <div class="settings-card">
+    <div class="st-header">
+      <div class="st-title">PARAMÈTRES</div>
+      <button class="st-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="st-section">
+      <div class="st-label">Mode d'horloge</div>
+      <div class="mode-cards">
+        <div class="mode-card sel" data-mode="cyber" onclick="selectMode('cyber')">
+          <div class="mc-icon">⚡</div>
+          <div class="mc-name">Cyber</div>
+          <div class="mc-desc">Néon futuriste</div>
+        </div>
+        <div class="mode-card" data-mode="minimal" onclick="selectMode('minimal')">
+          <div class="mc-icon">🌙</div>
+          <div class="mc-name">Minimal</div>
+          <div class="mc-desc">Sombre & discret</div>
+        </div>
+        <div class="mode-card" data-mode="custom" onclick="selectMode('custom')">
+          <div class="mc-icon">🎨</div>
+          <div class="mc-name">Custom</div>
+          <div class="mc-desc">Tu choisis tout</div>
+        </div>
       </div>
     </div>
-    <div class="picker-btns">
-      <button class="pk-btn pk-cancel" onclick="closePicker()">Annuler</button>
-      <button class="pk-btn pk-confirm" onclick="confirmAlarm()">Confirmer</button>
+    <div class="st-section" id="color-section" style="display:none;">
+      <div class="st-label">Couleur de l'heure</div>
+      <div class="color-row">
+        <div class="color-dot sel" style="background:#00f0ff;" data-color="#00f0ff" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#ff2d95;" data-color="#ff2d95" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#39ff14;" data-color="#39ff14" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#b44aff;" data-color="#b44aff" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#ff6a00;" data-color="#ff6a00" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#ffe600;" data-color="#ffe600" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#ffffff;" data-color="#ffffff" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#ff4455;" data-color="#ff4455" onclick="pickColor(this)"></div>
+      </div>
+    </div>
+    <div class="st-section">
+      <div class="st-label">Alarme</div>
+      <div class="alarm-row">
+        <div class="alarm-row-left">
+          <span class="al-icon">⏰</span>
+          <span class="al-time" id="al-time-btn" onclick="toggleAPicker()">07:00</span>
+        </div>
+        <div class="sw" id="al-sw" onclick="toggleAlarm()"></div>
+      </div>
+      <div class="apicker" id="apicker">
+        <div class="ap-wheels">
+          <div class="ap-col">
+            <button class="ap-btn" onclick="adjH(1)">▲</button>
+            <div class="ap-val" id="ap-h">07</div>
+            <button class="ap-btn" onclick="adjH(-1)">▼</button>
+          </div>
+          <div class="ap-sep">:</div>
+          <div class="ap-col">
+            <button class="ap-btn" onclick="adjM(1)">▲</button>
+            <div class="ap-val" id="ap-m">00</div>
+            <button class="ap-btn" onclick="adjM(-1)">▼</button>
+          </div>
+        </div>
+        <button class="ap-confirm" onclick="confirmAlarm()">Confirmer</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Ring -->
+<!-- RING -->
 <div class="ring-overlay" id="ring-overlay">
   <div class="ring-icon">🔔</div>
   <div class="ring-time" id="ring-time">07:00</div>
   <div class="ring-label">RÉVEIL</div>
-  <button class="ring-stop-btn" onclick="stopAlarm()">✕</button>
+  <button class="ring-stop" onclick="stopAlarm()">✕</button>
 </div>
-
-<div class="wake-hint">Appuie n'importe où pour masquer · écran toujours allumé</div>
 
 <script>
 'use strict';
 
-// ── STATE ──
-let alarmH = 7, alarmM = 0;
-let alarmOn = false;
-let alarmRinging = false;
-let alarmAudio = null;
+let currentMode = 'cyber';
+let customColor = '#00f0ff';
+let alarmH = 7, alarmM = 0, alarmOn = false, alarmRinging = false, alarmCtx = null;
 let pickH = 7, pickM = 0;
-let uiHidden = false;
 let wakeLock = null;
 
 const days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const CIRC = 2 * Math.PI * 96; // ~603.19
+const months = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
 
-// ── CLOCK ──
+// ── Clock ──
 function tick() {
   const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');
-  const m = String(now.getMinutes()).padStart(2, '0');
-  const s = now.getSeconds();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const dayN = days[now.getDay()];
+  const dateStr = now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
 
-  document.getElementById('hours').textContent = h;
-  document.getElementById('minutes').textContent = m;
+  document.getElementById('c-h').textContent = h;
+  document.getElementById('c-m').textContent = m;
+  document.getElementById('c-day').textContent = dayN;
+  document.getElementById('c-date').textContent = dateStr;
 
-  // Seconds arc
-  const offset = CIRC - (CIRC * s / 60);
-  document.getElementById('sec-arc').style.strokeDashoffset = offset;
+  document.getElementById('m-time').textContent = h + ':' + m;
+  document.getElementById('m-date').textContent = dayN + ' · ' + dateStr;
 
-  // Date
-  document.getElementById('day-name').textContent = days[now.getDay()];
-  document.getElementById('full-date').textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  document.getElementById('x-h').textContent = h;
+  document.getElementById('x-m').textContent = m;
+  document.getElementById('x-date').textContent = dayN + ' · ' + dateStr;
 
-  // Alarm check
-  if (alarmOn && !alarmRinging && now.getHours() === alarmH && now.getMinutes() === alarmM && s === 0) {
-    triggerAlarm();
-  }
+  if (alarmOn && !alarmRinging && now.getHours() === alarmH && now.getMinutes() === alarmM && now.getSeconds() === 0) triggerAlarm();
 }
-tick();
-setInterval(tick, 1000);
+tick(); setInterval(tick, 1000);
 
-// ── BATTERY ──
+// ── Modes ──
+function selectMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.clock-view').forEach(v => v.classList.remove('active'));
+  document.getElementById('mode-' + mode).classList.add('active');
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.toggle('sel', c.dataset.mode === mode));
+  document.getElementById('color-section').style.display = mode === 'custom' ? '' : 'none';
+  document.querySelectorAll('.orb').forEach(o => o.style.display = mode === 'minimal' ? 'none' : '');
+}
+
+// ── Custom color ──
+function pickColor(el) {
+  customColor = el.dataset.color;
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('sel'));
+  el.classList.add('sel');
+  applyCustomColor();
+}
+function applyCustomColor() {
+  const t = document.getElementById('x-time');
+  t.style.color = customColor;
+  t.style.textShadow = '0 0 10px ' + customColor + ', 0 0 30px ' + customColor + ', 0 0 60px ' + customColor + '40';
+  document.getElementById('x-date').style.color = customColor + '50';
+}
+applyCustomColor();
+
+// ── Battery ──
 async function initBattery() {
   try {
-    if ('getBattery' in navigator) {
-      const bat = await navigator.getBattery();
-      const update = () => {
-        const pct = Math.round(bat.level * 100);
-        const chr = bat.charging ? '⚡' : '';
-        document.getElementById('battery-val').textContent = chr + pct + '%';
-      };
-      update();
-      bat.addEventListener('levelchange', update);
-      bat.addEventListener('chargingchange', update);
-    }
+    if (!('getBattery' in navigator)) return;
+    const bat = await navigator.getBattery();
+    const update = () => {
+      const pct = Math.round(bat.level * 100);
+      const fill = document.getElementById('bat-fill');
+      fill.style.width = pct + '%';
+      fill.className = 'bat-fill' + (pct <= 20 ? ' low' : pct <= 50 ? ' mid' : '');
+      document.getElementById('bat-text').textContent = pct + '%' + (bat.charging ? ' ⚡' : '');
+    };
+    update();
+    bat.addEventListener('levelchange', update);
+    bat.addEventListener('chargingchange', update);
   } catch (e) {}
 }
 initBattery();
 
-// ── NETWORK ──
-function updateNet() {
-  document.getElementById('network-val').textContent = navigator.onLine ? 'En ligne' : 'Hors ligne';
-}
-updateNet();
-window.addEventListener('online', updateNet);
-window.addEventListener('offline', updateNet);
+// ── Network ──
+function updateNet() { document.getElementById('net-val').textContent = navigator.onLine ? 'En ligne' : 'Hors ligne'; }
+updateNet(); window.addEventListener('online', updateNet); window.addEventListener('offline', updateNet);
 
-// ── TEMPERATURE (simple estimate from date, no API needed) ──
-function fakeTemp() {
-  const m = new Date().getMonth();
-  const temps = [3, 5, 10, 14, 18, 23, 26, 25, 21, 15, 8, 4]; // approx Lyon
-  document.getElementById('temp-val').textContent = '~' + temps[m] + '°C';
+// ── Real weather ──
+async function fetchWeather() {
+  try {
+    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
+    const lat = pos.coords.latitude.toFixed(2);
+    const lon = pos.coords.longitude.toFixed(2);
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true');
+    const d = await r.json();
+    if (d.current_weather) document.getElementById('temp-val').textContent = Math.round(d.current_weather.temperature) + '°C';
+  } catch (e) {
+    const m = new Date().getMonth();
+    document.getElementById('temp-val').textContent = '~' + [3,5,10,14,18,23,26,25,21,15,8,4][m] + '°C';
+  }
 }
-fakeTemp();
+fetchWeather(); setInterval(fetchWeather, 600000);
 
-// ── ALARM ──
+// ── Alarm ──
 function toggleAlarm() {
   alarmOn = !alarmOn;
-  document.getElementById('alarm-switch').classList.toggle('on', alarmOn);
-  document.getElementById('alarm-toggle').classList.toggle('active', alarmOn);
+  document.getElementById('al-sw').classList.toggle('on', alarmOn);
+  document.getElementById('al-time-btn').classList.toggle('on', alarmOn);
 }
-function openPicker() {
-  pickH = alarmH; pickM = alarmM;
-  document.getElementById('pick-h').textContent = String(pickH).padStart(2, '0');
-  document.getElementById('pick-m').textContent = String(pickM).padStart(2, '0');
-  document.getElementById('picker-overlay').classList.add('open');
+function toggleAPicker() {
+  const el = document.getElementById('apicker');
+  if (!el.classList.contains('open')) { pickH = alarmH; pickM = alarmM; document.getElementById('ap-h').textContent = String(pickH).padStart(2,'0'); document.getElementById('ap-m').textContent = String(pickM).padStart(2,'0'); }
+  el.classList.toggle('open');
 }
-function closePicker() { document.getElementById('picker-overlay').classList.remove('open'); }
-function adjustH(d) { pickH = (pickH + d + 24) % 24; document.getElementById('pick-h').textContent = String(pickH).padStart(2, '0'); }
-function adjustM(d) { pickM = (pickM + d + 60) % 60; document.getElementById('pick-m').textContent = String(pickM).padStart(2, '0'); }
+function adjH(d) { pickH = (pickH + d + 24) % 24; document.getElementById('ap-h').textContent = String(pickH).padStart(2,'0'); }
+function adjM(d) { pickM = (pickM + d + 60) % 60; document.getElementById('ap-m').textContent = String(pickM).padStart(2,'0'); }
 function confirmAlarm() {
   alarmH = pickH; alarmM = pickM;
-  document.getElementById('alarm-time-display').textContent = String(alarmH).padStart(2, '0') + ':' + String(alarmM).padStart(2, '0');
+  document.getElementById('al-time-btn').textContent = String(alarmH).padStart(2,'0') + ':' + String(alarmM).padStart(2,'0');
   alarmOn = true;
-  document.getElementById('alarm-switch').classList.add('on');
-  document.getElementById('alarm-toggle').classList.add('active');
-  closePicker();
+  document.getElementById('al-sw').classList.add('on');
+  document.getElementById('al-time-btn').classList.add('on');
+  document.getElementById('apicker').classList.remove('open');
 }
 function triggerAlarm() {
   alarmRinging = true;
-  document.getElementById('ring-time').textContent = String(alarmH).padStart(2, '0') + ':' + String(alarmM).padStart(2, '0');
+  document.getElementById('ring-time').textContent = String(alarmH).padStart(2,'0') + ':' + String(alarmM).padStart(2,'0');
   document.getElementById('ring-overlay').classList.add('open');
-  // Sound — generate beep with Web Audio API
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     function beep() {
       if (!alarmRinging) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'square';
-      gain.gain.value = 0.15;
-      osc.start(); osc.stop(ctx.currentTime + 0.15);
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.frequency.value = 880; osc.type = 'square'; g.gain.value = 0.12;
+      osc.start(); osc.stop(ctx.currentTime + 0.12);
       setTimeout(() => { if (alarmRinging) beep(); }, 600);
     }
-    beep();
-    alarmAudio = ctx;
+    beep(); alarmCtx = ctx;
   } catch (e) {}
 }
 function stopAlarm() {
-  alarmRinging = false;
-  alarmOn = false;
+  alarmRinging = false; alarmOn = false;
   document.getElementById('ring-overlay').classList.remove('open');
-  document.getElementById('alarm-switch').classList.remove('on');
-  document.getElementById('alarm-toggle').classList.remove('active');
-  if (alarmAudio) { try { alarmAudio.close(); } catch (e) {} alarmAudio = null; }
+  document.getElementById('al-sw').classList.remove('on');
+  document.getElementById('al-time-btn').classList.remove('on');
+  if (alarmCtx) { try { alarmCtx.close(); } catch (e) {} alarmCtx = null; }
 }
 
-// ── TAP TO HIDE UI (clean clock mode) ──
-document.body.addEventListener('click', (e) => {
-  if (e.target.closest('.alarm-toggle, .alarm-section, .picker-overlay, .ring-overlay, .switch')) return;
-  uiHidden = !uiHidden;
-  ['info-bar', 'alarm-section'].forEach(id => {
-    document.getElementById(id).className = document.getElementById(id).className.replace(/fade-\w+/g, '') + (uiHidden ? ' fade-hide' : ' fade-show');
-  });
-});
+// ── Settings ──
+function openSettings() { document.getElementById('settings-overlay').classList.add('open'); }
+function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); }
 
-// ── WAKE LOCK (keep screen on) ──
-async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener('release', () => { wakeLock = null; });
-    }
-  } catch (e) {}
-}
-requestWakeLock();
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') requestWakeLock();
-});
+// ── Wake Lock ──
+async function reqWake() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+reqWake(); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reqWake(); });
+
+// ── Prevent zoom ──
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
 </script>
 </body>
 </html>
